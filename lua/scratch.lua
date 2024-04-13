@@ -6,6 +6,11 @@ local Scratch = {};
 
 Scratch.buffers = nil;
 
+local default_opts = {
+  width = 0.7,
+  height = 0.6,
+}
+
 local function close_scratch_window()
   require("scratch").close_window();
 end
@@ -50,16 +55,20 @@ function Scratch.create_buffer(filetype)
   return buf;
 end
 
-function Scratch.create_window(bufnr)
+function Scratch.create_window(bufnr, filetype)
   local screen_width = vim.opt.columns:get()
   local screen_height = vim.opt.lines:get() - vim.opt.cmdheight:get()
-  local width_ratio = 0.7;
-  local height_ratio = 0.6;
-  local width = math.floor(screen_width * width_ratio);
-  local height = math.floor(screen_height * height_ratio);
+  local config_width = Scratch.config.width;
+  local config_height = Scratch.config.height;
+  local width = config_width > 1 and config_width or math.floor(screen_width * config_width);
+  local height = config_height > 1 and config_height or math.floor(screen_height * config_height);
+  local win_title = "Scratch";
+  if filetype ~= nil then
+    win_title = win_title .. " " .. filetype;
+  end
   local win_opt = {
-    title = "Scratch",
-    relative = "win",
+    title = win_title,
+    relative = "editor",
     style = "minimal",
     border = "single",
     width = width,
@@ -77,7 +86,7 @@ end
 
 function Scratch.create_scratch(filetype)
   local buf = Scratch.create_buffer(filetype);
-  Scratch.create_window(buf);
+  Scratch.create_window(buf, filetype);
 end
 
 ---In case of any accident the plugin is reloaded, find all existing scratch buffers.
@@ -92,6 +101,18 @@ local function init_buffers()
   end
 end
 
+local function init_config(opts)
+  local config = {};
+  for k, v in pairs(default_opts) do
+    if opts[k] ~= nil then
+      config[k] = opts[k];
+    else
+      config[k] = v;
+    end
+  end
+  Scratch.config = config;
+end
+
 local function create_autocmd()
   vim.api.nvim_create_user_command("Scratch", function (opts)
     local filetype = opts.fargs[1];
@@ -99,8 +120,9 @@ local function create_autocmd()
   end, { nargs = "?" });
 end
 
-function Scratch.setup()
+function Scratch.setup(opts)
   init_buffers();
+  init_config(opts);
   create_autocmd();
 end
 
